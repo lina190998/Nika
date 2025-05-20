@@ -195,7 +195,7 @@ class TkinterBot(customtkinter.CTk):
                             screenshot = self.capture_screenshot()
                             cv2.imwrite(screenshot_path, screenshot)
                             screenshot_bgr = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
-                            image = cv2.cvtColor(np.array(screenshot_bgr), cv2.COLOR_RGB2BGR)
+                            image = np.array(screenshot_bgr)
                             print("Solving Captcha Ranmelle...")
                             cropped_image = self.find_and_crop_image(image)
                             # base64_image = self.image_to_base64(cropped_image)
@@ -211,7 +211,7 @@ class TkinterBot(customtkinter.CTk):
                                 result = result[idx]
                             else:
                                 result = None
-                                self.close_maplestory()
+                                # self.close_maplestory()
                             print(f"Result {self.counterld} =", result)
                         await self.move_to_and_click(750, 434)
                         await asyncio.sleep(.5) 
@@ -238,19 +238,24 @@ class TkinterBot(customtkinter.CTk):
                         for _ in range(num_clicks):
                             await self.move_to_and_click(865, 435)
                             await asyncio.sleep(.2)
-
+                        self.capture_screenshot()
+                        await asyncio.sleep(1.)
                         img_failed = self.run_once_detect_img_failed()
                         img_passed = self.run_once_detect_img_passed()
+                        print(img_failed)
+                        print(img_passed)
                         await asyncio.sleep(.5)
-                        if img_failed is not None:
+                        if img_failed:
                             await self.move_to_and_click(924, 496)
                             continue
-                        elif img_passed is not None:
+                        elif img_passed:
                             await self.move_to_and_click(924, 496)
                             self.counterld=0
                             print("Passed !! Congratulations !!")
                             self.asyncfunction1_event.set()
-                            break         
+                            break
+                        else:
+                            continue
             except Exception as e:
                 print(f'function1 error {e}')
             await asyncio.sleep(0.333)
@@ -306,14 +311,15 @@ class TkinterBot(customtkinter.CTk):
             self.start_button.configure(text='Stop', fg_color='lime', hover=False)
     
     def capture_screenshot(self):
-        screenshot_all = pyautogui.screenshot()
-        screenshot = cv2.cvtColor(np.array(screenshot_all), cv2.COLOR_RGB2BGR)
-        return screenshot
+        img = pyautogui.screenshot()
+        screenshot = np.array(img)
+        result = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
+        return result
     
     def detect_image_dawn_9(self):
         img = self.capture_screenshot()
         img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_dawn_9.png'))
-        location = self.mini_checker_img_function(img, img_path)
+        location = self.mini_checker_img_function_2(img, img_path)
         return location
 
     def run_once_detect_img_cookbot(self):
@@ -329,13 +335,13 @@ class TkinterBot(customtkinter.CTk):
         return location
     
     def run_once_detect_img_failed(self):
-        img = self.capture_screenshot
+        img = self.capture_screenshot()
         img_path1 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_failed.png'))
         location1 = self.mini_checker_img_function(img,img_path1)
         return (location1)
     
     def run_once_detect_img_passed(self):
-        img = self.capture_screenshot
+        img = self.capture_screenshot()
         img_path1 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_passed.png'))
         location1 = self.mini_checker_img_function(img,img_path1)
         return (location1)
@@ -350,6 +356,20 @@ class TkinterBot(customtkinter.CTk):
 
         result = cv2.matchTemplate(img, template_img, cv2.TM_CCOEFF_NORMED)
         locations = np.where(result >= 0.8)
+        match_centers = [(loc[0] + template_img.shape[1] / 2, loc[1] + template_img.shape[0] / 2) for loc in zip(*locations[::-1])]
+        
+        return match_centers if match_centers else None
+    
+    def mini_checker_img_function_2(self, img, template_img):
+        locations = []
+        if template_img is None or template_img.size == 0:
+            return None
+
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        template_img = cv2.cvtColor(template_img, cv2.COLOR_RGB2BGR)
+
+        result = cv2.matchTemplate(img, template_img, cv2.TM_CCOEFF_NORMED)
+        locations = np.where(result >= 0.99)
         match_centers = [(loc[0] + template_img.shape[1] / 2, loc[1] + template_img.shape[0] / 2) for loc in zip(*locations[::-1])]
         
         return match_centers if match_centers else None
@@ -425,7 +445,7 @@ class TkinterBot(customtkinter.CTk):
     def replace_IL(self, input_string, count_IL):
         if count_IL == 0:
             print("Không có ký tự 'I' hoặc 'l' để thay thế")
-            self.close_maplestory()
+            # self.close_maplestory()
             return [input_string]
         IL_positions = [i for i, c in enumerate(input_string) if c == 'I' or c == 'l']
         def swap_char(c):
