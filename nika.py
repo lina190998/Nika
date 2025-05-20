@@ -81,25 +81,30 @@ class TkinterBot(customtkinter.CTk):
     #     if self.dawntimer > 90:
     #         self.dawn = True
 
-    async def leftdawn(self):
-        print('Left Dawn')
-        await asyncio.sleep(0.5)
-        keyboard.press(Key.left)
-        await asyncio.sleep(0.1)
-        keyboard.release(Key.left)
-        await asyncio.sleep(0.5)
-        keyboard.press(self.dawnkey)
-        await asyncio.sleep(0.1)
-        keyboard.release(self.dawnkey)
-        await asyncio.sleep(0.5)
+    # async def leftdawn(self):
+    #     await asyncio.sleep(0.5)
+    #     keyboard.press(Key.left)
+    #     await asyncio.sleep(0.1)
+    #     keyboard.release(Key.left)
+    #     await asyncio.sleep(0.5)
+    #     keyboard.press(self.dawnkey)
+    #     await asyncio.sleep(0.1)
+    #     keyboard.release(self.dawnkey)
+    #     await asyncio.sleep(0.5)
 
-    async def rightdawn(self):
-        print('Right Dawn')
-        await asyncio.sleep(0.5)
-        keyboard.press(Key.right)
-        await asyncio.sleep(0.1)
-        keyboard.release(Key.right)
-        await asyncio.sleep(0.5)
+    # async def rightdawn(self):
+    #     await asyncio.sleep(0.5)
+    #     keyboard.press(Key.right)
+    #     await asyncio.sleep(0.1)
+    #     keyboard.release(Key.right)
+    #     await asyncio.sleep(0.5)
+    #     keyboard.press(self.dawnkey)
+    #     await asyncio.sleep(0.1)
+    #     keyboard.release(self.dawnkey)
+    #     await asyncio.sleep(0.5)
+
+    async def pressdawn(self):
+        print('Press Dawn')
         keyboard.press(self.dawnkey)
         await asyncio.sleep(0.1)
         keyboard.release(self.dawnkey)
@@ -164,7 +169,7 @@ class TkinterBot(customtkinter.CTk):
                     await self.level_rebirth_pt()
                 elif dawn9:
                     await asyncio.sleep(.5)
-                    await random.choice([self.leftdawn, self.rightdawn])()
+                    await self.pressdawn()
                     await asyncio.sleep(.5)  
                 else:
                     await asyncio.sleep(.3)
