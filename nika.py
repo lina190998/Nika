@@ -162,15 +162,19 @@ class TkinterBot(customtkinter.CTk):
                 if self.stop_event.is_set():
                     return  
             try:
-                self.capture_screenshot()
-                rb = self.detect_image_level_300()
-                dawn9 = self.detect_image_dawn_9()
+                rb, dawn9, hottime = self.detect_all_image()
                 if rb:
                     await self.level_rebirth_pt()
                 elif dawn9:
                     await asyncio.sleep(.5)
                     await self.pressdawn()
-                    await asyncio.sleep(.5)  
+                    await asyncio.sleep(.5)
+                elif hottime:
+                    print("Got Hot Time...")
+                    await asyncio.sleep(.5)
+                    await self.move_to_and_click(772, 443)
+                    await asyncio.sleep(.5)
+                    print("Click Ok Done...")
                 else:
                     await asyncio.sleep(.3)
             except Exception as e:
@@ -184,7 +188,6 @@ class TkinterBot(customtkinter.CTk):
                 if self.stop_event.is_set():
                     return  
             try:
-                self.capture_screenshot()
                 botcheck = self.run_once_detect_img_cookbot()
                 if botcheck:
                     print(f'{botcheck}')
@@ -216,7 +219,7 @@ class TkinterBot(customtkinter.CTk):
                                 result = result[idx]
                             else:
                                 result = None
-                                # self.close_maplestory()
+                                self.close_maplestory()
                             print(f"Result {self.counterld} =", result)
                         await self.move_to_and_click(750, 434)
                         await asyncio.sleep(.5) 
@@ -243,7 +246,6 @@ class TkinterBot(customtkinter.CTk):
                         for _ in range(num_clicks):
                             await self.move_to_and_click(865, 435)
                             await asyncio.sleep(.2)
-                        self.capture_screenshot()
                         await asyncio.sleep(1.)
                         img_failed = self.run_once_detect_img_failed()
                         img_passed = self.run_once_detect_img_passed()
@@ -321,10 +323,33 @@ class TkinterBot(customtkinter.CTk):
         result = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
         return result
     
+    def detect_all_image(self):
+        img = self.capture_screenshot()
+        img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_level_300.png'))
+        img_path2 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_dawn_9.png'))
+        img_path3 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_hottime.png'))
+        
+        location = self.mini_checker_img_function(img, img_path)
+        location2 = self.mini_checker_img_function_2(img, img_path2)
+        location3 = self.mini_checker_img_function(img, img_path3)
+        return (location, location2, location3)
+    
+    def detect_image_hottime(self):
+        img = self.capture_screenshot()
+        img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_hottime.png'))
+        location = self.mini_checker_img_function_2(img, img_path)
+        return location
+    
     def detect_image_dawn_9(self):
         img = self.capture_screenshot()
         img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_dawn_9.png'))
         location = self.mini_checker_img_function_2(img, img_path)
+        return location
+
+    def detect_image_level_300(self):
+        img = self.capture_screenshot()
+        img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_level_300.png'))
+        location = self.mini_checker_img_function(img, img_path)
         return location
 
     def run_once_detect_img_cookbot(self):
@@ -333,12 +358,6 @@ class TkinterBot(customtkinter.CTk):
         location1 = self.mini_checker_img_function(img,img_path1)
         return (location1)
 
-    def detect_image_level_300(self):
-        img = self.capture_screenshot()
-        img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_level_300.png'))
-        location = self.mini_checker_img_function(img, img_path)
-        return location
-    
     def run_once_detect_img_failed(self):
         img = self.capture_screenshot()
         img_path1 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_failed.png'))
@@ -450,7 +469,7 @@ class TkinterBot(customtkinter.CTk):
     def replace_IL(self, input_string, count_IL):
         if count_IL == 0:
             print("Không có ký tự 'I' hoặc 'l' để thay thế")
-            # self.close_maplestory()
+            self.close_maplestory()
             return [input_string]
         IL_positions = [i for i, c in enumerate(input_string) if c == 'I' or c == 'l']
         def swap_char(c):
