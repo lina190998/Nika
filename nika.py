@@ -414,8 +414,8 @@ class TkinterBot(customtkinter.CTk):
             x1 = x + 290
             y1 = y + 4
             cropped_image = image[y-27:y1, x+65:x1]
-            width = int(cropped_image.shape[1] * 1500 / 100)
-            height = int(cropped_image.shape[0] * 1500 / 100)
+            width = int(cropped_image.shape[1] * 1100 / 100)
+            height = int(cropped_image.shape[0] * 1100 / 100)
             dim = (width, height)
             resized_image = cv2.resize(cropped_image, dim, interpolation=cv2.INTER_CUBIC)
             gray = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
