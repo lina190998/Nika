@@ -8,5 +8,4 @@ pyautogui
 pygetwindow
 pywin32
 pynput
-GitPython
 psutil
