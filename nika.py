@@ -78,6 +78,7 @@ class TkinterBot(customtkinter.CTk):
             print("Repository không tồn tại. Đang clone từ GitHub...")
             git.Repo.clone_from(self.repo_url, self.local_repo_path)
             print("Clone thành công!")
+            print("Clone thành công!")
         else:
             print("Đang kiểm tra cập nhật từ GitHub...")
             repo = git.Repo(self.local_repo_path)
