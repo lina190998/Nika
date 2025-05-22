@@ -6,30 +6,27 @@ import numpy as np
 import os
 import pyautogui
 import requests
-import base64
 from PIL import Image, ImageTk
 import asyncio
 import threading
 import random
 from time import perf_counter
 import psutil
-import pygetwindow
+import pygetwindow as gw
 import win32gui
 from pynput.keyboard import Key, Controller as KeyboardController, Listener
 from pynput.mouse import Controller as MouseController
 from configparser import ConfigParser
 import time
 import re
-import git
+from game import Game
 mouse = MouseController()
 keyboard = KeyboardController()
 class TkinterBot(customtkinter.CTk):
     def __init__(self):
         super().__init__()
-        # self.repo_url = "https://github.com/lina190998/Nika.git"
         self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        # self.local_repo_path = os.path.join(self.BASE_DIR)
-        # self.check_and_update_source()
+        self.g = Game((8, 103, 230, 170))
         self.config = ConfigParser()
         self.config.read(os.path.join(self.BASE_DIR, 'settings.ini'))
         self.dawnkey = self.config.get('main', 'dawnkey')
@@ -72,32 +69,6 @@ class TkinterBot(customtkinter.CTk):
         self.counterld=0
         self.listener = Listener(on_press=self.on_press)
         self.listener.start()
-
-    # def check_and_update_source(self):
-    #     if not os.path.exists(self.local_repo_path):
-    #         print("Repository không tồn tại. Đang clone từ GitHub...")
-    #         git.Repo.clone_from(self.repo_url, self.local_repo_path)
-    #         print("Clone thành công!")
-    #     else:
-    #         try:
-    #             print("Đang kiểm tra cập nhật từ GitHub...")
-    #             repo = git.Repo(self.local_repo_path)
-    #             origin = repo.remotes.origin
-
-    #             # Lấy thông tin cập nhật
-    #             origin.fetch()
-
-    #             # Kiểm tra commit trên nhánh main
-    #             if repo.head.commit != origin.refs.main.commit:
-    #                 print("Có bản cập nhật mới. Đang cập nhật...")
-    #                 repo.git.pull()
-    #                 print("Cập nhật thành công!")
-    #             else:
-    #                 print("Không có bản cập nhật mới.")
-    #         except git.exc.InvalidGitRepositoryError:
-    #             print("Thư mục không phải là một repository Git hợp lệ. Vui lòng kiểm tra lại.")
-    #         except ValueError as e:
-    #             print(f"Lỗi: {e}. Vui lòng kiểm tra nhánh trong repository.")
 
 
     def on_select(self, event):
@@ -214,7 +185,8 @@ class TkinterBot(customtkinter.CTk):
                 if self.stop_event.is_set():
                     return  
             try:
-                rb, hottime = self.detect_all_image()
+                self.g.generate_newest_screenshot()
+                rb, hottime = self.g.detect_all_image()
                 if rb:
                     await self.level_rebirth_pt()
                 elif self.dawn:
@@ -242,7 +214,8 @@ class TkinterBot(customtkinter.CTk):
                 if self.stop_event.is_set():
                     return  
             try:
-                botcheck = self.run_once_detect_img_cookbot()
+                self.g.generate_newest_screenshot()
+                botcheck = self.g.run_once_detect_img_cookbot()
                 if botcheck:
                     print(f'Got LD : {botcheck}')
                     self.asyncfunction1_event.clear()
@@ -254,14 +227,12 @@ class TkinterBot(customtkinter.CTk):
                                 await self.move_to_and_click(800, 400)
                                 await asyncio.sleep(.1)
                             screenshot_path = os.path.join(self.BASE_DIR, 'image', 'img_ld.png')
-                            screenshot = self.capture_screenshot()
+                            screenshot = self.g.capture_screenshot()
                             cv2.imwrite(screenshot_path, screenshot)
                             screenshot_bgr = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
                             image = np.array(screenshot_bgr)
                             print("Solving Captcha Ranmelle...")
                             cropped_image = self.find_and_crop_image(image)
-                            # base64_image = self.image_to_base64(cropped_image)
-                            # result = self.ocr_vision_base64(base64_image)
                             result = self.ocr_space_file(cropped_image)
                             result = self.filter_result(result)
                             print(result)
@@ -304,14 +275,15 @@ class TkinterBot(customtkinter.CTk):
                             await asyncio.sleep(.2)
                         await asyncio.sleep(3.)
                         print("Looking for Failed and Passed")
-                        img_failed = self.run_once_detect_img_failed()
-                        img_passed = self.run_once_detect_img_passed()
+                        self.g.generate_newest_screenshot()
+                        img_failed = self.g.run_once_detect_img_failed()
+                        img_passed = self.g.run_once_detect_img_passed()
                         await asyncio.sleep(.5)
-                        if img_failed:
+                        if img_failed is not None:
                             print("Failed try again")
                             await self.move_to_and_click(924, 496)
                             continue
-                        elif img_passed:
+                        elif img_passed is not None:
                             print("Passed !! Congratulations !!")
                             await self.move_to_and_click(924, 496)
                             self.counterld=0
@@ -345,7 +317,7 @@ class TkinterBot(customtkinter.CTk):
     def init_maple_windows(self):
         windows=[]
         winlist=[]
-        winlist = pygetwindow.getWindowsWithTitle('Ranmelle')
+        winlist = gw.getWindowsWithTitle('Ranmelle')
         for w in winlist:
             windows.append(w._hWnd)
         for windowhwnd in windows:
@@ -377,69 +349,6 @@ class TkinterBot(customtkinter.CTk):
         else:
             self.start_button.configure(text='Stop', fg_color='lime', hover=False)
     
-    def capture_screenshot(self):
-        img = pyautogui.screenshot()
-        screenshot = np.array(img)
-        result = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
-        return result
-    
-    def detect_all_image(self):
-        img = self.capture_screenshot()
-        img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_level_300.png'))
-        img_path2 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_hottime.png'))
-        location = self.mini_checker_img_function_2(img, img_path)
-        location2 = self.mini_checker_img_function(img, img_path2)
-        return (location, location2)
-
-    def run_once_detect_img_cookbot(self):
-        img = self.capture_screenshot()
-        img_path1 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_cookbot.png'))
-        location1 = self.mini_checker_img_function(img,img_path1)
-        return (location1)
-
-    def run_once_detect_img_failed(self):
-        img = self.capture_screenshot()
-        img_path1 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_failed.png'))
-        location1 = self.mini_checker_img_function(img,img_path1)
-        return (location1)
-    
-    def run_once_detect_img_passed(self):
-        img = self.capture_screenshot()
-        img_path1 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_passed.png'))
-        location1 = self.mini_checker_img_function(img,img_path1)
-        return (location1)
-    
-    def mini_checker_img_function(self, img, template_img):
-        locations = []
-        if template_img is None or template_img.size == 0:
-            return None
-
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        template_img = cv2.cvtColor(template_img, cv2.COLOR_RGB2BGR)
-
-        result = cv2.matchTemplate(img, template_img, cv2.TM_CCOEFF_NORMED)
-        locations = np.where(result >= 0.8)
-        match_centers = [(loc[0] + template_img.shape[1] / 2, loc[1] + template_img.shape[0] / 2) for loc in zip(*locations[::-1])]
-        
-        return match_centers if match_centers else None
-    
-    def mini_checker_img_function_2(self, img, template_img):
-        locations = []
-        if template_img is None or template_img.size == 0:
-            return None
-
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        template_img = cv2.cvtColor(template_img, cv2.COLOR_RGB2BGR)
-
-        result = cv2.matchTemplate(img, template_img, cv2.TM_CCOEFF_NORMED)
-        locations = np.where(result >= 0.99)
-        match_centers = [(loc[0] + template_img.shape[1] / 2, loc[1] + template_img.shape[0] / 2) for loc in zip(*locations[::-1])]
-        
-        return match_centers if match_centers else None
-    
-    # def image_to_base64(self, image_path):
-    #     with open(image_path, 'rb') as image_file:
-    #         return base64.b64encode(image_file.read()).decode('utf-8')
     
     def filter_result(self, result):
         filtered_result = re.sub(r'\r?\n+', '', result)
@@ -450,7 +359,8 @@ class TkinterBot(customtkinter.CTk):
             return None
         try:
             output_path = (os.path.join(self.BASE_DIR, 'image', 'processed_image.png'))
-            result = self.run_once_detect_img_cookbot()
+            self.g.generate_newest_screenshot()
+            result = self.g.run_once_detect_img_cookbot()
             x, y = result[0]
             x = int(x)
             y = int(y)
