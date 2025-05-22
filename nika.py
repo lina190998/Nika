@@ -19,20 +19,39 @@ from pynput.keyboard import Key, Controller as KeyboardController, Listener
 from pynput.mouse import Controller as MouseController
 from configparser import ConfigParser
 import time
+import re
+import git
 mouse = MouseController()
 keyboard = KeyboardController()
 class TkinterBot(customtkinter.CTk):
     def __init__(self):
         super().__init__()
+        self.repo_url = "https://github.com/lina190998/Nika.git"
         self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        self.local_repo_path = os.path.join(self.BASE_DIR, "Nika")
+        self.check_and_update_source()
         self.config = ConfigParser()
         self.config.read(os.path.join(self.BASE_DIR, 'settings.ini'))
         self.dawnkey = self.config.get('main', 'dawnkey')
         self.api_key = self.config.get('main', 'api_key')
+        self.count_dawn = self.config.get('main', 'countdawn')
+        self.dawn_timer = self.config.get('main', 'dawntimer')
         self.init_tkinter()
         self.init_maple_windows()
         self.start_button = customtkinter.CTkButton(self, text="Start", command=self.togglepause, fg_color='tomato', text_color='black', font=('Helvetica', 16), width=130, hover=False)
         self.start_button.pack(pady=20)
+        self.countdawn_label = customtkinter.CTkLabel(self, text="Count Dawn : ", text_color='black', font=('Helvetica', 14), width=20)
+        self.countdawn_label.pack(pady=20)
+        self.countdawn_label.place(x=5,y=60)
+        self.combobox_dawn = customtkinter.CTkComboBox(self, values=[str(i) for i in [1, 2, 3]], font=('Helvetica', 14), state="readonly",command=self.on_select, width=20)
+        self.combobox_dawn.place(x=100,y=60)
+        self.combobox_dawn.set(self.count_dawn)
+        self.dawntimer_label = customtkinter.CTkLabel(self, text="Dawn Timer : ", text_color='black', font=('Helvetica', 14), width=20)
+        self.dawntimer_label.pack(pady=20)
+        self.dawntimer_label.place(x=5,y=100)
+        self.combobox_dawn_timer = customtkinter.CTkComboBox(self, values=[str(i) for i in [90, 95, 100, 105, 110, 115, 120]], font=('Helvetica', 14), state="readonly",command=self.on_select_dawn, width=70)
+        self.combobox_dawn_timer.place(x=100,y=100)
+        self.combobox_dawn_timer.set(self.dawn_timer)
         self.label_start_button = customtkinter.CTkLabel(self, text='F1 : Stop/Start', text_color='black', font=('Helvetica', 10), width=20)
         self.label_start_button.pack(pady=20)
         self.label_start_button.place(x=10, y=self.window_height - 40)
@@ -46,13 +65,41 @@ class TkinterBot(customtkinter.CTk):
         self.asyncfunction1_event.set()
         self.asyncfunction2_event = asyncio.Event()
         self.asyncfunction2_event.set()
-        # self.dawn=True
-        # self.dawntimer0=0
-        # self.dawntimer=0
+        self.dawntimer0=0
+        self.dawntimer=0
+        self.dawn=True
         self.now=0
         self.counterld=0
         self.listener = Listener(on_press=self.on_press)
         self.listener.start()
+
+    def check_and_update_source(self):
+        if not os.path.exists(self.local_repo_path):
+            print("Repository không tồn tại. Đang clone từ GitHub...")
+            git.Repo.clone_from(self.repo_url, self.local_repo_path)
+            print("Clone thành công!")
+        else:
+            print("Đang kiểm tra cập nhật từ GitHub...")
+            repo = git.Repo(self.local_repo_path)
+            origin = repo.remotes.origin
+
+            # Lấy thông tin cập nhật
+            origin.fetch()
+            if repo.head.commit != origin.refs.main.commit:
+                print("Có bản cập nhật mới. Đang cập nhật...")
+                repo.git.pull()
+                print("Cập nhật thành công!")
+            else:
+                print("Không có bản cập nhật mới.")
+
+    def on_select(self, event):
+        self.setdawn = self.combobox_dawn.get()
+        print(f"Current Dawn is set to {self.setdawn}")
+
+    def on_select_dawn(self, event):
+        self.setdawn_timer = self.combobox_dawn_timer.get()
+        print(f"Current Dawn Timer is set to {self.setdawn_timer}")
+        
 
     def on_press(self, key):
         try:
@@ -75,40 +122,37 @@ class TkinterBot(customtkinter.CTk):
         self.thread1.start()
         self.thread2.start()
 
-    # async def process_timer(self):
-    #     self.now = perf_counter()
-    #     self.dawntimer = self.now - self.dawntimer0
-    #     if self.dawntimer > 90:
-    #         self.dawn = True
-
-    # async def leftdawn(self):
-    #     await asyncio.sleep(0.5)
-    #     keyboard.press(Key.left)
-    #     await asyncio.sleep(0.1)
-    #     keyboard.release(Key.left)
-    #     await asyncio.sleep(0.5)
-    #     keyboard.press(self.dawnkey)
-    #     await asyncio.sleep(0.1)
-    #     keyboard.release(self.dawnkey)
-    #     await asyncio.sleep(0.5)
-
-    # async def rightdawn(self):
-    #     await asyncio.sleep(0.5)
-    #     keyboard.press(Key.right)
-    #     await asyncio.sleep(0.1)
-    #     keyboard.release(Key.right)
-    #     await asyncio.sleep(0.5)
-    #     keyboard.press(self.dawnkey)
-    #     await asyncio.sleep(0.1)
-    #     keyboard.release(self.dawnkey)
-    #     await asyncio.sleep(0.5)
+    async def process_timer(self):
+        self.setdawn_timer = self.combobox_dawn_timer.get()
+        self.dawntimer = self.now - self.dawntimer0
+        if self.dawntimer > int(self.setdawn_timer):
+            self.dawn = True
 
     async def pressdawn(self):
-        print('Press Dawn')
-        keyboard.press(self.dawnkey)
-        await asyncio.sleep(0.1)
-        keyboard.release(self.dawnkey)
-        await asyncio.sleep(0.5)
+        self.setdawn = self.combobox_dawn.get()
+        print(f'Press Dawn : {self.setdawn}')
+        if int(self.setdawn) == 1:
+            await asyncio.sleep(0.5)
+            keyboard.press(self.dawnkey)
+            await asyncio.sleep(0.1)
+            keyboard.release(self.dawnkey)
+            await asyncio.sleep(0.5)
+        elif int(self.setdawn) == 2:
+            for _ in range(2):
+                await asyncio.sleep(0.5)
+                keyboard.press(self.dawnkey)
+                await asyncio.sleep(0.1)
+                keyboard.release(self.dawnkey)
+                await asyncio.sleep(0.5)
+        elif int(self.setdawn) == 3:
+            for _ in range(3):
+                await asyncio.sleep(0.5)
+                keyboard.press(self.dawnkey)
+                await asyncio.sleep(0.1)
+                keyboard.release(self.dawnkey)
+                await asyncio.sleep(0.5)
+        self.dawn = False
+        self.dawntimer0=perf_counter()
 
     async def move_to_and_click(self, x, y):
         pyautogui.moveTo(x, y, duration=0.5)
@@ -162,11 +206,11 @@ class TkinterBot(customtkinter.CTk):
                 if self.stop_event.is_set():
                     return  
             try:
-                rb, dawn9, hottime = self.detect_all_image()
+                rb, hottime = self.detect_all_image()
                 if rb:
                     await self.level_rebirth_pt()
-                elif dawn9:
-                    await asyncio.sleep(.5)
+                elif self.dawn:
+                    await asyncio.sleep(.5)               
                     await self.pressdawn()
                     await asyncio.sleep(.5)
                 elif hottime:
@@ -177,6 +221,8 @@ class TkinterBot(customtkinter.CTk):
                     print("Click Ok Done...")
                 else:
                     await asyncio.sleep(.3)
+                self.now = perf_counter()
+                await self.process_timer()
             except Exception as e:
                 print(f'function1 error {e}')
             await asyncio.sleep(0.333)
@@ -190,7 +236,7 @@ class TkinterBot(customtkinter.CTk):
             try:
                 botcheck = self.run_once_detect_img_cookbot()
                 if botcheck:
-                    print(f'{botcheck}')
+                    print(f'Got LD : {botcheck}')
                     self.asyncfunction1_event.clear()
                     while True:
                         self.counterld+=1
@@ -209,6 +255,7 @@ class TkinterBot(customtkinter.CTk):
                             # base64_image = self.image_to_base64(cropped_image)
                             # result = self.ocr_vision_base64(base64_image)
                             result = self.ocr_space_file(cropped_image)
+                            result = self.filter_result(result)
                             print(result)
                         else:
                             count_IL = self.count_IL(result)
@@ -221,6 +268,7 @@ class TkinterBot(customtkinter.CTk):
                                 result = None
                                 self.close_maplestory()
                             print(f"Result {self.counterld} =", result)
+                            
                         await self.move_to_and_click(750, 434)
                         await asyncio.sleep(.5) 
                         for _ in range(30):
@@ -239,30 +287,34 @@ class TkinterBot(customtkinter.CTk):
                                 keyboard.press(char)
                                 keyboard.release(char)
                                 await asyncio.sleep(0.1)
-                        await asyncio.sleep(.5)
+                        await asyncio.sleep(1.)
                         await self.move_to_and_click(926, 488)
                         await asyncio.sleep(1.5)
                         num_clicks = random.randint(2, 3)
                         for _ in range(num_clicks):
                             await self.move_to_and_click(865, 435)
                             await asyncio.sleep(.2)
-                        await asyncio.sleep(1.)
+                        await asyncio.sleep(3.)
+                        print("Looking for Failed and Passed")
                         img_failed = self.run_once_detect_img_failed()
                         img_passed = self.run_once_detect_img_passed()
-                        print(img_failed)
-                        print(img_passed)
                         await asyncio.sleep(.5)
                         if img_failed:
+                            print("Failed try again")
                             await self.move_to_and_click(924, 496)
                             continue
                         elif img_passed:
+                            print("Passed !! Congratulations !!")
                             await self.move_to_and_click(924, 496)
                             self.counterld=0
-                            print("Passed !! Congratulations !!")
                             self.asyncfunction1_event.set()
                             break
                         else:
-                            continue
+                            print("Both images not found... Try again...")
+                            await self.move_to_and_click(924, 496)
+                            self.counterld=0
+                            self.asyncfunction1_event.set()
+                            break
             except Exception as e:
                 print(f'function1 error {e}')
             await asyncio.sleep(0.333)
@@ -275,7 +327,7 @@ class TkinterBot(customtkinter.CTk):
         self.screen_width = self.winfo_screenwidth()
         self.screen_height = self.winfo_screenheight()
         self.window_width = 200
-        self.window_height = 100
+        self.window_height = 170
         self.window_x = self.screen_width - self.window_width
         self.window_y = 0
         self.geometry(f"{self.window_width}x{self.window_height}+{self.window_x-10}+{self.window_y}")
@@ -326,31 +378,10 @@ class TkinterBot(customtkinter.CTk):
     def detect_all_image(self):
         img = self.capture_screenshot()
         img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_level_300.png'))
-        img_path2 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_dawn_9.png'))
-        img_path3 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_hottime.png'))
-        
-        location = self.mini_checker_img_function(img, img_path)
-        location2 = self.mini_checker_img_function_2(img, img_path2)
-        location3 = self.mini_checker_img_function(img, img_path3)
-        return (location, location2, location3)
-    
-    def detect_image_hottime(self):
-        img = self.capture_screenshot()
-        img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_hottime.png'))
+        img_path2 = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_hottime.png'))
         location = self.mini_checker_img_function_2(img, img_path)
-        return location
-    
-    def detect_image_dawn_9(self):
-        img = self.capture_screenshot()
-        img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_dawn_9.png'))
-        location = self.mini_checker_img_function_2(img, img_path)
-        return location
-
-    def detect_image_level_300(self):
-        img = self.capture_screenshot()
-        img_path = cv2.imread(os.path.join(self.BASE_DIR, 'image', 'img_level_300.png'))
-        location = self.mini_checker_img_function(img, img_path)
-        return location
+        location2 = self.mini_checker_img_function(img, img_path2)
+        return (location, location2)
 
     def run_once_detect_img_cookbot(self):
         img = self.capture_screenshot()
@@ -401,6 +432,10 @@ class TkinterBot(customtkinter.CTk):
     # def image_to_base64(self, image_path):
     #     with open(image_path, 'rb') as image_file:
     #         return base64.b64encode(image_file.read()).decode('utf-8')
+    
+    def filter_result(self, result):
+        filtered_result = re.sub(r'\r?\n+', '', result)
+        return filtered_result
     
     def find_and_crop_image(self, image):
         if image is None:
@@ -503,6 +538,19 @@ class TkinterBot(customtkinter.CTk):
         self.listener.stop()
         self.pause = True
         self.stop_event.set()
+        self.asyncfunction1_event.clear()
+        self.asyncfunction2_event.clear()
+
+        self.setdawn = self.combobox_dawn.get()
+        self.setdawn_timer = self.combobox_dawn_timer.get()
+
+        # Save configuration
+        self.config.set('main', 'countdawn', str(self.setdawn))
+        self.config.set('main', 'dawntimer', str(self.setdawn_timer))
+
+        with open('settings.ini', 'w') as f:
+            self.config.write(f)
+
         try:
             self.quit()
             self.destroy()
@@ -512,20 +560,22 @@ class TkinterBot(customtkinter.CTk):
                     thread.join(timeout=5)
         except Exception as e:
             print(f"Error while stopping threads: {e}")
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                pending = asyncio.all_tasks(loop)
-                for task in pending:
-                    task.cancel()
-                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-                loop.run_until_complete(loop.shutdown_asyncgens())
-                loop.stop()
-                loop.close()
-        except Exception as e:
-            print(f"Error while stopping asyncio tasks: {e}")
+
+        # Instead of closing the event loop directly, set a flag to stop tasks
+        if asyncio.get_event_loop().is_running():
+            print("Stopping asyncio tasks...")
+            for task in asyncio.all_tasks(asyncio.get_event_loop()):
+                task.cancel()
+
+            # Allow tasks to finish
+            try:
+                asyncio.gather(*asyncio.all_tasks(asyncio.get_event_loop()), return_exceptions=True)
+            except Exception as e:
+                print(f"Error while gathering tasks: {e}")
+
         print("All threads and tasks have been stopped.")
         os._exit(0)
+
 
 async def main2():
     mytkinter = TkinterBot()
