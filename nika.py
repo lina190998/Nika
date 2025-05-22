@@ -26,10 +26,10 @@ keyboard = KeyboardController()
 class TkinterBot(customtkinter.CTk):
     def __init__(self):
         super().__init__()
-        self.repo_url = "https://github.com/lina190998/Nika.git"
+        # self.repo_url = "https://github.com/lina190998/Nika.git"
         self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        self.local_repo_path = os.path.join(self.BASE_DIR, "Nika")
-        self.check_and_update_source()
+        # self.local_repo_path = os.path.join(self.BASE_DIR)
+        # self.check_and_update_source()
         self.config = ConfigParser()
         self.config.read(os.path.join(self.BASE_DIR, 'settings.ini'))
         self.dawnkey = self.config.get('main', 'dawnkey')
@@ -73,25 +73,32 @@ class TkinterBot(customtkinter.CTk):
         self.listener = Listener(on_press=self.on_press)
         self.listener.start()
 
-    def check_and_update_source(self):
-        if not os.path.exists(self.local_repo_path):
-            print("Repository không tồn tại. Đang clone từ GitHub...")
-            git.Repo.clone_from(self.repo_url, self.local_repo_path)
-            print("Clone thành công!")
-            print("Clone thành công!")
-        else:
-            print("Đang kiểm tra cập nhật từ GitHub...")
-            repo = git.Repo(self.local_repo_path)
-            origin = repo.remotes.origin
+    # def check_and_update_source(self):
+    #     if not os.path.exists(self.local_repo_path):
+    #         print("Repository không tồn tại. Đang clone từ GitHub...")
+    #         git.Repo.clone_from(self.repo_url, self.local_repo_path)
+    #         print("Clone thành công!")
+    #     else:
+    #         try:
+    #             print("Đang kiểm tra cập nhật từ GitHub...")
+    #             repo = git.Repo(self.local_repo_path)
+    #             origin = repo.remotes.origin
 
-            # Lấy thông tin cập nhật
-            origin.fetch()
-            if repo.head.commit != origin.refs.main.commit:
-                print("Có bản cập nhật mới. Đang cập nhật...")
-                repo.git.pull()
-                print("Cập nhật thành công!")
-            else:
-                print("Không có bản cập nhật mới.")
+    #             # Lấy thông tin cập nhật
+    #             origin.fetch()
+
+    #             # Kiểm tra commit trên nhánh main
+    #             if repo.head.commit != origin.refs.main.commit:
+    #                 print("Có bản cập nhật mới. Đang cập nhật...")
+    #                 repo.git.pull()
+    #                 print("Cập nhật thành công!")
+    #             else:
+    #                 print("Không có bản cập nhật mới.")
+    #         except git.exc.InvalidGitRepositoryError:
+    #             print("Thư mục không phải là một repository Git hợp lệ. Vui lòng kiểm tra lại.")
+    #         except ValueError as e:
+    #             print(f"Lỗi: {e}. Vui lòng kiểm tra nhánh trong repository.")
+
 
     def on_select(self, event):
         self.setdawn = self.combobox_dawn.get()
