@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 import os
 import pyautogui
-import requests
 from PIL import Image, ImageTk
 import asyncio
 import threading
@@ -18,8 +17,9 @@ from pynput.keyboard import Key, Controller as KeyboardController, Listener
 from pynput.mouse import Controller as MouseController
 from configparser import ConfigParser
 import time
-import re
 from game import Game
+from anticaptchaofficial.imagecaptcha import *
+import requests
 mouse = MouseController()
 keyboard = KeyboardController()
 class TkinterBot(customtkinter.CTk):
@@ -70,6 +70,7 @@ class TkinterBot(customtkinter.CTk):
         self.listener = Listener(on_press=self.on_press)
         self.listener.start()
 
+    
 
     def on_select(self, event):
         self.setdawn = self.combobox_dawn.get()
@@ -221,7 +222,7 @@ class TkinterBot(customtkinter.CTk):
                     self.asyncfunction1_event.clear()
                     while True:
                         self.counterld+=1
-                        if self.counterld == 1:
+                        if self.counterld <= 8:
                             num_clicks = random.randint(2, 3)
                             for _ in range(num_clicks):
                                 await self.move_to_and_click(800, 400)
@@ -233,21 +234,10 @@ class TkinterBot(customtkinter.CTk):
                             image = np.array(screenshot_bgr)
                             print("Solving Captcha Ranmelle...")
                             cropped_image = self.find_and_crop_image(image)
-                            result = self.ocr_space_file(cropped_image)
-                            result = self.filter_result(result)
+                            result = self.ocr_imagecaptcha(cropped_image)
                             print(result)
                         else:
-                            count_IL = self.count_IL(result)
-                            result = self.replace_IL(result, count_IL)
-                            base = 2
-                            idx = self.counterld - base
-                            if 0 <= idx < len(result):
-                                result = result[idx]
-                            else:
-                                result = None
-                                self.close_maplestory()
-                            print(f"Result {self.counterld} =", result)
-                            
+                            await self.close_maplestory()
                         await self.move_to_and_click(750, 434)
                         await asyncio.sleep(.5) 
                         for _ in range(30):
@@ -282,6 +272,7 @@ class TkinterBot(customtkinter.CTk):
                         if img_failed is not None:
                             print("Failed try again")
                             await self.move_to_and_click(924, 496)
+                            self.counterld+1
                             continue
                         elif img_passed is not None:
                             print("Passed !! Congratulations !!")
@@ -292,7 +283,7 @@ class TkinterBot(customtkinter.CTk):
                         else:
                             print("Both images not found... Try again...")
                             await self.move_to_and_click(924, 496)
-                            self.counterld=0
+                            self.counterld+1
                             self.asyncfunction1_event.set()
                             break
             except Exception as e:
@@ -349,11 +340,6 @@ class TkinterBot(customtkinter.CTk):
         else:
             self.start_button.configure(text='Stop', fg_color='lime', hover=False)
     
-    
-    def filter_result(self, result):
-        filtered_result = re.sub(r'\r?\n+', '', result)
-        return filtered_result
-    
     def find_and_crop_image(self, image):
         if image is None:
             return None
@@ -380,28 +366,7 @@ class TkinterBot(customtkinter.CTk):
         except Exception as e:
             print(f"Lỗi khi cắt ảnh: {e}")
             return None
-    
-    # def ocr_vision_base64(self, base64_image):
-    #     url = f"https://vision.googleapis.com/v1/images:annotate?key={self.api_key}"
-    #     request_body = {"requests": [{"image": {"content": base64_image},"features": [{"type": "TEXT_DETECTION","maxResults": 10}]}]}
-    #     response = requests.post(url, json=request_body)
-    #     if response.status_code == 200:
-    #         result = response.json()
-    #         texts = result['responses'][0].get('textAnnotations', [])
-    #         return texts[0]['description'] if texts else "Không có văn bản"
-    #     else:
-    #         return f"Lỗi: {response.status_code}"
         
-    def ocr_space_file(self, filename, language='eng'):
-        payload = {'isOverlayRequired': False,'apikey': self.api_key,'language': language,'OCREngine': 1}
-        with open(filename, 'rb') as f:
-            r = requests.post('https://api.ocr.space/parse/image',files={filename: f},data=payload)
-        result = r.json()
-        if result['IsErroredOnProcessing']:
-            return f"Lỗi: {result['ErrorMessage']}"
-        else:
-            return result['ParsedResults'][0]['ParsedText'] if result['ParsedResults'] else "Không có văn bản"
-    
     def close_maplestory(self):
         print("[-] Đang đóng tiến trình chứa 'MapleStory' và 'Ranmelle'...")
         for proc in psutil.process_iter(['name']):
@@ -416,42 +381,23 @@ class TkinterBot(customtkinter.CTk):
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
     
-    def count_IL(self, input_string):
-        return sum(1 for c in input_string if c == 'I' or c == 'l')
-    
-    def replace_IL(self, input_string, count_IL):
-        if count_IL == 0:
-            print("Không có ký tự 'I' hoặc 'l' để thay thế")
-            self.close_maplestory()
-            return [input_string]
-        IL_positions = [i for i, c in enumerate(input_string) if c == 'I' or c == 'l']
-        def swap_char(c):
-            return 'l' if c == 'I' else 'I'
-        if count_IL == 1:
-            pos = IL_positions[0]
-            lst = list(input_string)
-            lst[pos] = swap_char(lst[pos])
-            result = ''.join(lst)
-            print(f"Chuỗi ban đầu: {input_string}")
-            print(f"Số lượng 'I' + 'l': {count_IL}")
-            print(f"Chuỗi sau khi thay thế: {result}")
-            return [result]
-        results = []
-        for replace_count in range(1, count_IL + 1):
-            for i in range(replace_count):
-                lst = list(input_string)
-                pos = IL_positions[i]
-                lst[pos] = swap_char(lst[pos])
-            results.append(''.join(lst))
-        lst_all = list(input_string)
-        for pos in IL_positions:
-            lst_all[pos] = swap_char(lst_all[pos])
-        results.append(''.join(lst_all))
-        print(f"Chuỗi ban đầu: {input_string}")
-        for idx, s in enumerate(results, 1):
-            print(f"Chuỗi thay thế {idx}: {s}")
-        return results
-    
+    def ocr_imagecaptcha(self, image):
+        try:
+            solver = imagecaptcha()
+            solver.set_verbose(1)
+            solver.set_key(self.api_key)
+            solver.set_soft_id(0)
+            solver.set_case(True)
+            solver.set_language_pool("en")
+            captcha_text = solver.solve_and_return_solution(image)
+            if captcha_text != 0:
+                return captcha_text
+            else:
+                print("Task finished with error "+solver.error_code)
+                return None
+        except Exception as e:
+            print(f"Lỗi Anti-Catpcha: {e}")
+            return None
     def on_close(self):
         self.listener.stop()
         self.pause = True
