@@ -109,30 +109,11 @@ class TkinterBot(customtkinter.CTk):
             self.dawn = True
 
     async def pressdawn(self):
-        self.setdawn = self.combobox_dawn.get()
-        print(f'Press Dawn : {self.setdawn}')
-        if int(self.setdawn) == 1:
-            await asyncio.sleep(0.5)
-            keyboard.press(self.dawnkey)
-            await asyncio.sleep(0.1)
-            keyboard.release(self.dawnkey)
-            await asyncio.sleep(0.5)
-        elif int(self.setdawn) == 2:
-            for _ in range(2):
-                await asyncio.sleep(0.5)
-                keyboard.press(self.dawnkey)
-                await asyncio.sleep(0.1)
-                keyboard.release(self.dawnkey)
-                await asyncio.sleep(0.5)
-        elif int(self.setdawn) == 3:
-            for _ in range(3):
-                await asyncio.sleep(0.5)
-                keyboard.press(self.dawnkey)
-                await asyncio.sleep(0.1)
-                keyboard.release(self.dawnkey)
-                await asyncio.sleep(0.5)
-        self.dawn = False
-        self.dawntimer0=perf_counter()
+        await asyncio.sleep(0.1)
+        keyboard.press(self.dawnkey)
+        await asyncio.sleep(0.1)
+        keyboard.release(self.dawnkey)
+        await asyncio.sleep(0.1)
 
     async def move_to_and_click(self, x, y):
         pyautogui.moveTo(x, y, duration=0.5)
@@ -190,10 +171,6 @@ class TkinterBot(customtkinter.CTk):
                 rb, hottime = self.g.detect_all_image()
                 if rb:
                     await self.level_rebirth_pt()
-                elif self.dawn:
-                    await asyncio.sleep(.5)               
-                    await self.pressdawn()
-                    await asyncio.sleep(.5)
                 elif hottime:
                     print("Got Hot Time...")
                     await asyncio.sleep(.5)
@@ -201,9 +178,9 @@ class TkinterBot(customtkinter.CTk):
                     await asyncio.sleep(.5)
                     print("Click Ok Done...")
                 else:
-                    await asyncio.sleep(.3)
-                self.now = perf_counter()
-                await self.process_timer()
+                    await asyncio.sleep(.5)               
+                    await self.pressdawn()
+                    await asyncio.sleep(.5)
             except Exception as e:
                 print(f'function1 error {e}')
             await asyncio.sleep(0.333)
